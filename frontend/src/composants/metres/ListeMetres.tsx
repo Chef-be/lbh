@@ -14,7 +14,7 @@ interface Metre {
   projet: string;
   statut: string;
   statut_libelle: string;
-  total_general: number | null;
+  montant_total_ht: number | null;
   date_modification: string;
 }
 
@@ -91,7 +91,7 @@ export function ListeMetres() {
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-right font-mono text-xs">
-                    {m.total_general != null ? Number(m.total_general).toLocaleString("fr-FR") : "—"}
+                    {m.montant_total_ht != null ? Number(m.montant_total_ht).toLocaleString("fr-FR") : "—"}
                   </td>
                   <td className="py-3 text-right text-xs text-slate-400">
                     {new Date(m.date_modification).toLocaleDateString("fr-FR")}

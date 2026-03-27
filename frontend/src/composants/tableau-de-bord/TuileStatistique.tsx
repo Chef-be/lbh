@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
+import { api } from "@/crochets/useApi";
 
 interface PropsTuile {
   libelle: string;
@@ -18,11 +19,7 @@ const couleursParType: Record<PropsTuile["couleur"], string> = {
 };
 
 async function chargerStatistiques() {
-  const reponse = await fetch("/api/projets/statistiques/", {
-    headers: { Authorization: `Bearer ${sessionStorage.getItem("jeton_acces") || ""}` },
-  });
-  if (!reponse.ok) return null;
-  return reponse.json();
+  return api.get("/api/projets/statistiques/");
 }
 
 export function TuileStatistique({ libelle, codeStatistique, couleur }: PropsTuile) {

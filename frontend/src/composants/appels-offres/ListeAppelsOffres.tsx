@@ -10,15 +10,15 @@ import { useState } from "react";
 interface AppelOffres {
   id: string;
   intitule: string;
-  reference: string;
+  type_libelle: string;
   projet_reference: string;
   projet: string;
   statut: string;
   statut_libelle: string;
   type_procedure: string;
   nb_offres: number;
-  date_remise: string | null;
-  date_modification: string;
+  date_limite_remise: string | null;
+  date_creation: string;
 }
 
 interface PageResultats {
@@ -41,7 +41,7 @@ export function ListeAppelsOffres() {
   const [recherche, setRecherche] = useState("");
   const [page, setPage] = useState(1);
 
-  const params = new URLSearchParams({ ordering: "-date_modification", page: String(page) });
+  const params = new URLSearchParams({ ordering: "-date_creation", page: String(page) });
   if (recherche) params.set("search", recherche);
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
@@ -76,7 +76,7 @@ export function ListeAppelsOffres() {
             <thead>
               <tr className="border-b border-slate-100 text-xs text-slate-500">
                 <th className="text-left py-2 pr-4 font-medium">Projet</th>
-                <th className="text-left py-2 pr-4 font-medium">Référence / Intitulé</th>
+                <th className="text-left py-2 pr-4 font-medium">Intitulé / Type</th>
                 <th className="text-left py-2 pr-4 font-medium">Statut</th>
                 <th className="text-center py-2 pr-4 font-medium">Offres</th>
                 <th className="text-right py-2 pr-4 font-medium">Date remise</th>
@@ -93,7 +93,7 @@ export function ListeAppelsOffres() {
                   </td>
                   <td className="py-3 pr-4">
                     <p className="font-medium">{ao.intitule}</p>
-                    {ao.reference && <p className="font-mono text-xs text-slate-400">{ao.reference}</p>}
+                    <p className="text-xs text-slate-400">{ao.type_libelle}</p>
                   </td>
                   <td className="py-3 pr-4">
                     <span className={clsx(STYLES_STATUT[ao.statut] || "badge-neutre")}>
@@ -102,10 +102,10 @@ export function ListeAppelsOffres() {
                   </td>
                   <td className="py-3 pr-4 text-center font-mono text-xs">{ao.nb_offres}</td>
                   <td className="py-3 pr-4 text-right text-xs text-slate-500">
-                    {ao.date_remise ? new Date(ao.date_remise).toLocaleDateString("fr-FR") : "—"}
+                    {ao.date_limite_remise ? new Date(ao.date_limite_remise).toLocaleDateString("fr-FR") : "—"}
                   </td>
                   <td className="py-3 text-right text-xs text-slate-400">
-                    {new Date(ao.date_modification).toLocaleDateString("fr-FR")}
+                    {new Date(ao.date_creation).toLocaleDateString("fr-FR")}
                   </td>
                 </tr>
               ))}

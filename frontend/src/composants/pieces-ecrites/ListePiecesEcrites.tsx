@@ -10,8 +10,8 @@ import { useState } from "react";
 interface PieceEcrite {
   id: string;
   intitule: string;
-  type_piece: string;
-  type_libelle: string;
+  modele: string;
+  modele_libelle: string;
   projet_reference: string;
   projet: string;
   statut: string;
@@ -72,7 +72,7 @@ export function ListePiecesEcrites() {
               <tr className="border-b border-slate-100 text-xs text-slate-500">
                 <th className="text-left py-2 pr-4 font-medium">Projet</th>
                 <th className="text-left py-2 pr-4 font-medium">Intitulé</th>
-                <th className="text-left py-2 pr-4 font-medium">Type</th>
+                <th className="text-left py-2 pr-4 font-medium">Modèle</th>
                 <th className="text-left py-2 pr-4 font-medium">Statut</th>
                 <th className="text-right py-2 font-medium">Modifié</th>
               </tr>
@@ -87,7 +87,7 @@ export function ListePiecesEcrites() {
                   </td>
                   <td className="py-3 pr-4 font-medium">{p.intitule}</td>
                   <td className="py-3 pr-4">
-                    <span className="badge-neutre">{p.type_libelle || p.type_piece}</span>
+                    <span className="badge-neutre">{p.modele_libelle || "—"}</span>
                   </td>
                   <td className="py-3 pr-4">
                     <span className={clsx(STYLES_STATUT[p.statut] || "badge-neutre")}>

@@ -11,9 +11,10 @@ interface EtudeVoirie {
   intitule: string;
   projet_reference: string;
   projet: string;
-  statut: string;
-  trafic_pl_j: number | null;
-  categorie_trafic: string;
+  type_voie: string;
+  type_voie_libelle: string;
+  tmja_pl: number | null;
+  calcul_conforme: boolean | null;
   date_modification: string;
 }
 
@@ -68,8 +69,8 @@ export function ListeEtudesVoirie() {
               <tr className="border-b border-slate-100 text-xs text-slate-500">
                 <th className="text-left py-2 pr-4 font-medium">Projet</th>
                 <th className="text-left py-2 pr-4 font-medium">Intitulé</th>
-                <th className="text-right py-2 pr-4 font-medium">Trafic PL/j</th>
-                <th className="text-left py-2 pr-4 font-medium">Catégorie</th>
+                <th className="text-right py-2 pr-4 font-medium">TMJA PL/j</th>
+                <th className="text-left py-2 pr-4 font-medium">Type de voie</th>
                 <th className="text-right py-2 font-medium">Modifié</th>
               </tr>
             </thead>
@@ -83,9 +84,9 @@ export function ListeEtudesVoirie() {
                   </td>
                   <td className="py-3 pr-4 font-medium">{etude.intitule}</td>
                   <td className="py-3 pr-4 text-right font-mono text-xs">
-                    {etude.trafic_pl_j != null ? etude.trafic_pl_j.toLocaleString("fr-FR") : "—"}
+                    {etude.tmja_pl != null ? etude.tmja_pl.toLocaleString("fr-FR") : "—"}
                   </td>
-                  <td className="py-3 pr-4 text-xs text-slate-500">{etude.categorie_trafic || "—"}</td>
+                  <td className="py-3 pr-4 text-xs text-slate-500">{etude.type_voie_libelle || "—"}</td>
                   <td className="py-3 text-right text-xs text-slate-400">
                     {new Date(etude.date_modification).toLocaleDateString("fr-FR")}
                   </td>

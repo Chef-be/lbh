@@ -9,14 +9,14 @@ import { Search, Filter } from "lucide-react";
 interface LigneBibliotheque {
   id: string;
   code: string;
-  designation: string;
+  designation_courte: string;
+  designation_longue?: string;
   unite: string;
   famille: string;
   sous_famille: string;
-  statut: string;
+  statut_validation: string;
   debourse_sec_unitaire: number | null;
   prix_vente_unitaire: number | null;
-  date_modification: string;
 }
 
 interface PageResultats {
@@ -49,7 +49,7 @@ export function ListeBibliotheque() {
 
   const params = new URLSearchParams({ ordering: "famille,code", page: String(page) });
   if (recherche) params.set("search", recherche);
-  if (filtreStatut) params.set("statut", filtreStatut);
+  if (filtreStatut) params.set("statut_validation", filtreStatut);
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["bibliotheque", recherche, filtreStatut, page],
@@ -119,7 +119,7 @@ export function ListeBibliotheque() {
                 <tr key={ligne.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4 font-mono text-xs text-slate-600">{ligne.code || "—"}</td>
                   <td className="py-3 pr-4 max-w-xs">
-                    <p className="font-medium truncate">{ligne.designation}</p>
+                    <p className="font-medium truncate">{ligne.designation_courte}</p>
                     {ligne.sous_famille && (
                       <p className="text-xs text-slate-400 mt-0.5">{ligne.sous_famille}</p>
                     )}
@@ -133,8 +133,8 @@ export function ListeBibliotheque() {
                     {formaterMontant(ligne.prix_vente_unitaire)}
                   </td>
                   <td className="py-3">
-                    <span className={clsx(STYLES_STATUT[ligne.statut] || "badge-neutre")}>
-                      {LIBELLES_STATUT[ligne.statut] || ligne.statut}
+                    <span className={clsx(STYLES_STATUT[ligne.statut_validation] || "badge-neutre")}>
+                      {LIBELLES_STATUT[ligne.statut_validation] || ligne.statut_validation}
                     </span>
                   </td>
                 </tr>
