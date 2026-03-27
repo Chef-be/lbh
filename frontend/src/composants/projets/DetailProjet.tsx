@@ -133,9 +133,11 @@ export function DetailProjet({ id }: { id: string }) {
         <div className="flex gap-2 shrink-0 flex-wrap">
           <Link href={`/projets/${id}/economie`} className="btn-secondaire text-xs">Économie</Link>
           <Link href={`/projets/${id}/rentabilite`} className="btn-secondaire text-xs">Rentabilité</Link>
+          <Link href={`/projets/${id}/execution`} className="btn-secondaire text-xs">Exécution</Link>
           <Link href={`/projets/${id}/metres`} className="btn-secondaire text-xs">Métrés</Link>
           <Link href={`/projets/${id}/appels-offres`} className="btn-secondaire text-xs">Appels d&apos;offres</Link>
           <Link href={`/projets/${id}/documents`} className="btn-secondaire text-xs">Documents</Link>
+          <Link href={`/projets/${id}/pieces-ecrites`} className="btn-secondaire text-xs">Pièces écrites</Link>
           <Link href={`/projets/${id}/voirie`} className="btn-secondaire text-xs">Voirie</Link>
           <Link href={`/projets/${id}/batiment`} className="btn-secondaire text-xs">Bâtiment</Link>
           <Link href={`/projets/${id}/modifier`} className="btn-primaire text-xs flex items-center gap-1">

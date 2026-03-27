@@ -71,7 +71,11 @@ export function ListeEtudesBatimentProjet({ projetId }: { projetId: string }) {
         <tbody>
           {etudes.map((etude) => (
             <tr key={etude.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-              <td className="py-3 pr-4 font-medium">{etude.intitule}</td>
+              <td className="py-3 pr-4 font-medium">
+                <Link href={`/projets/${projetId}/batiment/${etude.id}`} className="hover:text-primaire-700">
+                  {etude.intitule}
+                </Link>
+              </td>
               <td className="py-3 pr-4 text-xs text-slate-500">
                 <p>{etude.type_batiment_libelle}</p>
                 <p className="text-slate-400">{etude.type_operation_libelle}</p>

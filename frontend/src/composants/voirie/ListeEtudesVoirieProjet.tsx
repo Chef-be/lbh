@@ -70,7 +70,11 @@ export function ListeEtudesVoirieProjet({ projetId }: { projetId: string }) {
         <tbody>
           {etudes.map((etude) => (
             <tr key={etude.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-              <td className="py-3 pr-4 font-medium">{etude.intitule}</td>
+              <td className="py-3 pr-4 font-medium">
+                <Link href={`/projets/${projetId}/voirie/${etude.id}`} className="hover:text-primaire-700">
+                  {etude.intitule}
+                </Link>
+              </td>
               <td className="py-3 pr-4 text-xs text-slate-500">{etude.type_voie_libelle}</td>
               <td className="py-3 pr-4 text-right font-mono text-xs">
                 {etude.tmja_pl != null ? etude.tmja_pl.toLocaleString("fr-FR") : "—"}
