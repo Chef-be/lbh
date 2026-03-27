@@ -1,0 +1,595 @@
+# ============================================================
+# PLATEFORME BEE — Docker Compose Principal
+# Bureau d'Études Économiste
+# ============================================================
+# Utilisation :
+#   Démarrer : docker compose up -d
+#   Arrêter  : docker compose down
+#   Journaux : docker compose logs -f [service]
+#   État     : docker compose ps
+# ============================================================
+# Architecture réseau :
+#   bee-nginx (127.0.0.1:3082) ← Reverse proxy Plesk (80/443)
+#   Tous les services internes communiquent sur bee-reseau.
+#   Aucun service interne n'est exposé directement sur internet.
+# ============================================================
+
+name: plateforme-bee
+
+# ------------------------------------------------------------
+# VOLUMES PERSISTANTS
+# ------------------------------------------------------------
+volumes:
+  bee-donnees-postgresql:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/postgresql
+  bee-donnees-redis:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/redis
+  bee-donnees-minio:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/minio
+  bee-journaux:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/journaux
+  bee-medias:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/medias
+  bee-statiques:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/statiques
+
+# ------------------------------------------------------------
+# RÉSEAU DÉDIÉ
+# ------------------------------------------------------------
+networks:
+  bee-reseau:
+    driver: bridge
+    name: bee-reseau
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+
+# ============================================================
+# SERVICES
+# ============================================================
+services:
+
+  # ----------------------------------------------------------
+  # PROXY NGINX — Point d'entrée unique (vers Plesk)
+  # ----------------------------------------------------------
+  bee-nginx:
+    image: nginx:1.27-alpine
+    container_name: bee-nginx
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PORT_ENTREE_PLESK:-3082}:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - bee-statiques:/var/www/statiques:ro
+      - bee-medias:/var/www/medias:ro
+      - bee-journaux:/var/log/bee/nginx:rw
+    depends_on:
+      bee-frontend:
+        condition: service_healthy
+      bee-backend:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "proxy"
+      bee.description: "Proxy Nginx — point d'entrée Plesk"
+
+  # ----------------------------------------------------------
+  # INTERFACE UTILISATEUR — Next.js + TypeScript
+  # ----------------------------------------------------------
+  bee-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${ENVIRONNEMENT:-developpement}
+    container_name: bee-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    volumes:
+      - ./frontend:/app:rw
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=${ENVIRONNEMENT:-development}
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - NEXTAUTH_SECRET=${SECRET_NEXTAUTH}
+      - NEXTAUTH_URL=${URL_BASE:-http://localhost:3082}
+      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_NOM_APPLICATION=${NOM_APPLICATION:-Plateforme BEE}
+    depends_on:
+      bee-backend:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/sante"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "interface"
+      bee.description: "Interface utilisateur Next.js"
+
+  # ----------------------------------------------------------
+  # CŒUR APPLICATIF — Django + Django REST Framework
+  # ----------------------------------------------------------
+  bee-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bee-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    volumes:
+      - ./backend:/app:rw
+      - bee-medias:/app/medias:rw
+      - bee-statiques:/app/statiques:rw
+      - bee-journaux:/var/log/bee/backend:rw
+      - /var/www/vhosts/lbh-economiste.com/ressources:/ressources:ro
+    environment:
+      - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT:-developpement}
+      - SECRET_DJANGO=${SECRET_DJANGO}
+      - BDD_HOTE=${BDD_HOTE:-bee-postgresql}
+      - BDD_PORT=${BDD_PORT:-5432}
+      - BDD_NOM=${BDD_NOM:-bee_production}
+      - BDD_UTILISATEUR=${BDD_UTILISATEUR:-bee_appli}
+      - BDD_MOT_DE_PASSE=${BDD_MOT_DE_PASSE}
+      - REDIS_HOTE=${REDIS_HOTE:-bee-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_MOT_DE_PASSE=${REDIS_MOT_DE_PASSE:-}
+      - CELERY_COURTIER=${CELERY_COURTIER:-redis://bee-redis:6379/1}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+      - MINIO_SSL=${MINIO_SSL:-false}
+      - COURRIEL_HOTE_SMTP=${COURRIEL_HOTE_SMTP}
+      - COURRIEL_PORT_SMTP=${COURRIEL_PORT_SMTP:-587}
+      - COURRIEL_UTILISATEUR=${COURRIEL_UTILISATEUR}
+      - COURRIEL_MOT_DE_PASSE=${COURRIEL_MOT_DE_PASSE}
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - DEBUG=${DEBUG:-false}
+      - URL_BASE=${URL_BASE}
+      - DOMAINES_AUTORISES=${DOMAINES_AUTORISES}
+    depends_on:
+      bee-postgresql:
+        condition: service_healthy
+      bee-redis:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/sante/"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "backend"
+      bee.description: "Cœur applicatif Django"
+
+  # ----------------------------------------------------------
+  # SERVICES SPÉCIALISÉS — FastAPI
+  # ----------------------------------------------------------
+  bee-services:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    container_name: bee-services
+    restart: unless-stopped
+    expose:
+      - "8001"
+    volumes:
+      - ./services:/app:rw
+      - bee-medias:/app/medias:rw
+      - bee-journaux:/var/log/bee/services:rw
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - BDD_URL=${DATABASE_URL}
+      - REDIS_URL=${URL_REDIS:-redis://bee-redis:6379}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+      - SECRET_API=${SECRET_DJANGO}
+      - OCR_HOTE=${OCR_HOTE:-bee-ocr}
+      - OCR_PORT=${OCR_PORT:-8010}
+      - ANALYSE_PDF_HOTE=${ANALYSE_PDF_HOTE:-bee-analyse-pdf}
+      - ANALYSE_PDF_PORT=${ANALYSE_PDF_PORT:-8011}
+      - ANALYSE_CAO_HOTE=${ANALYSE_CAO_HOTE:-bee-analyse-cao}
+      - ANALYSE_CAO_PORT=${ANALYSE_CAO_PORT:-8012}
+    depends_on:
+      bee-postgresql:
+        condition: service_healthy
+      bee-redis:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/sante"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "services-specialises"
+      bee.description: "Services FastAPI spécialisés (OCR, PDF, CAO)"
+
+  # ----------------------------------------------------------
+  # BASE DE DONNÉES — PostgreSQL + PostGIS
+  # ----------------------------------------------------------
+  bee-postgresql:
+    image: postgis/postgis:16-3.4
+    container_name: bee-postgresql
+    restart: unless-stopped
+    expose:
+      - "5432"
+    # Port exposé uniquement sur localhost pour les outils d'administration
+    # À retirer en production
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - bee-donnees-postgresql:/var/lib/postgresql/data:rw
+      - ./scripts/installation/init-postgresql.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    environment:
+      - POSTGRES_DB=${BDD_NOM:-bee_production}
+      - POSTGRES_USER=${BDD_UTILISATEUR:-bee_appli}
+      - POSTGRES_PASSWORD=${BDD_MOT_DE_PASSE}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=fr_FR.UTF-8
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BDD_UTILISATEUR:-bee_appli} -d ${BDD_NOM:-bee_production}"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "base-de-donnees"
+      bee.description: "PostgreSQL 16 + PostGIS 3.4"
+
+  # ----------------------------------------------------------
+  # FILE D'ATTENTE ET CACHE — Redis
+  # ----------------------------------------------------------
+  bee-redis:
+    image: redis:7-alpine
+    container_name: bee-redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - bee-donnees-redis:/data:rw
+      - ./nginx/conf.d/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: >
+      redis-server
+      /usr/local/etc/redis/redis.conf
+      --requirepass "${REDIS_MOT_DE_PASSE:-}"
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "cache-file-attente"
+      bee.description: "Redis 7 — cache et file d'attente Celery"
+
+  # ----------------------------------------------------------
+  # TRAITEMENT ASYNCHRONE — Celery Worker
+  # ----------------------------------------------------------
+  bee-celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bee-celery
+    restart: unless-stopped
+    command: celery -A configuration worker --loglevel=info --concurrency=4 -Q principale,documents,calculs,courriels
+    volumes:
+      - ./backend:/app:rw
+      - bee-medias:/app/medias:rw
+      - bee-journaux:/var/log/bee/celery:rw
+      - /var/www/vhosts/lbh-economiste.com/ressources:/ressources:ro
+    environment:
+      - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT:-developpement}
+      - CELERY_COURTIER=${CELERY_COURTIER:-redis://bee-redis:6379/1}
+      - CELERY_RESULTATS=${CELERY_RESULTATS:-redis://bee-redis:6379/1}
+      - BDD_HOTE=${BDD_HOTE:-bee-postgresql}
+      - BDD_PORT=${BDD_PORT:-5432}
+      - BDD_NOM=${BDD_NOM:-bee_production}
+      - BDD_UTILISATEUR=${BDD_UTILISATEUR:-bee_appli}
+      - BDD_MOT_DE_PASSE=${BDD_MOT_DE_PASSE}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+    depends_on:
+      bee-redis:
+        condition: service_healthy
+      bee-postgresql:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "celery", "-A", "configuration", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      bee.service: "traitement-asynchrone"
+      bee.description: "Celery Worker — traitements asynchrones"
+
+  # ----------------------------------------------------------
+  # ORDONNANCEUR — Celery Beat
+  # ----------------------------------------------------------
+  bee-celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bee-celery-beat
+    restart: unless-stopped
+    command: celery -A configuration beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app:rw
+      - bee-journaux:/var/log/bee/celery-beat:rw
+    environment:
+      - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT:-developpement}
+      - CELERY_COURTIER=${CELERY_COURTIER:-redis://bee-redis:6379/1}
+      - BDD_HOTE=${BDD_HOTE:-bee-postgresql}
+      - BDD_PORT=${BDD_PORT:-5432}
+      - BDD_NOM=${BDD_NOM:-bee_production}
+      - BDD_UTILISATEUR=${BDD_UTILISATEUR:-bee_appli}
+      - BDD_MOT_DE_PASSE=${BDD_MOT_DE_PASSE}
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+    depends_on:
+      bee-redis:
+        condition: service_healthy
+      bee-postgresql:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "ordonnanceur"
+      bee.description: "Celery Beat — tâches planifiées"
+
+  # ----------------------------------------------------------
+  # STOCKAGE OBJET — MinIO
+  # ----------------------------------------------------------
+  bee-minio:
+    image: minio/minio:latest
+    container_name: bee-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      # Console d'administration MinIO (accès local uniquement)
+      - "127.0.0.1:${PORT_MINIO_CONSOLE:-9101}:9001"
+      # API MinIO (accès local uniquement)
+      - "127.0.0.1:${PORT_MINIO_API:-9100}:9000"
+    volumes:
+      - bee-donnees-minio:/data:rw
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCES_CLE}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_CLE}
+      - MINIO_BROWSER=on
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "stockage-objet"
+      bee.description: "MinIO — stockage objet compatible S3"
+
+  # ----------------------------------------------------------
+  # SERVICE OCR — Tesseract + Python
+  # ----------------------------------------------------------
+  bee-ocr:
+    build:
+      context: ./services/ocr
+      dockerfile: Dockerfile
+    container_name: bee-ocr
+    restart: unless-stopped
+    expose:
+      - "8010"
+    volumes:
+      - ./services/ocr:/app:rw
+      - bee-journaux:/var/log/bee/ocr:rw
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - OCR_LANGUES=${OCR_LANGUES:-fra,eng}
+      - OCR_DPI_MIN=${OCR_DPI_MIN:-150}
+      - OCR_DPI_OPTIMAL=${OCR_DPI_OPTIMAL:-300}
+      - OCR_SEUIL_CONFIANCE=${OCR_SEUIL_CONFIANCE:-60}
+      - OCR_TAILLE_MAX_FICHIER=${OCR_TAILLE_MAX_FICHIER:-52428800}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+    depends_on:
+      bee-minio:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/sante"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "ocr"
+      bee.description: "Service OCR — Tesseract 5 + Python"
+
+  # ----------------------------------------------------------
+  # SERVICE ANALYSE PDF
+  # ----------------------------------------------------------
+  bee-analyse-pdf:
+    build:
+      context: ./services/analyse-pdf
+      dockerfile: Dockerfile
+    container_name: bee-analyse-pdf
+    restart: unless-stopped
+    expose:
+      - "8011"
+    volumes:
+      - ./services/analyse-pdf:/app:rw
+      - bee-journaux:/var/log/bee/analyse-pdf:rw
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - ANALYSE_PDF_TAILLE_MAX=${ANALYSE_PDF_TAILLE_MAX:-104857600}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+    depends_on:
+      bee-minio:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/sante"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "analyse-pdf"
+      bee.description: "Service d'analyse PDF métier"
+
+  # ----------------------------------------------------------
+  # SERVICE ANALYSE CAO — DWG / DXF
+  # ----------------------------------------------------------
+  bee-analyse-cao:
+    build:
+      context: ./services/analyse-cao
+      dockerfile: Dockerfile
+    container_name: bee-analyse-cao
+    restart: unless-stopped
+    expose:
+      - "8012"
+    volumes:
+      - ./services/analyse-cao:/app:rw
+      - bee-journaux:/var/log/bee/analyse-cao:rw
+    environment:
+      - TZ=${FUSEAU_HORAIRE:-Europe/Paris}
+      - ANALYSE_CAO_FORMATS_ACCEPTES=${ANALYSE_CAO_FORMATS_ACCEPTES:-dxf,dwg}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-bee-minio:9000}
+      - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
+      - MINIO_SECRET_CLE=${MINIO_SECRET_CLE}
+    depends_on:
+      bee-minio:
+        condition: service_healthy
+    networks:
+      - bee-reseau
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/sante"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    labels:
+      bee.service: "analyse-cao"
+      bee.description: "Service d'analyse DWG/DXF"
