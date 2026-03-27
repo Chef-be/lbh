@@ -110,6 +110,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: ${ENVIRONNEMENT}
     container_name: {{ prefixe_conteneurs }}-frontend
     restart: unless-stopped
     expose:
