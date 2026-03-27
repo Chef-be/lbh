@@ -61,7 +61,7 @@ export function ListeEtudesEconomiquesGlobale() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["etudes-economiques-globale", recherche, filtreStatut, page],
-    queryFn: () => api.get(`/api/etudes-economiques/?${params.toString()}`),
+    queryFn: () => api.get(`/api/economie/?${params.toString()}`),
   });
 
   const etudes = data?.results ?? [];

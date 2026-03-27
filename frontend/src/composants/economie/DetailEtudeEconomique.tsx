@@ -100,17 +100,17 @@ export function DetailEtudeEconomique({
 
   const { data: etude, isLoading, isError } = useQuery<EtudeDetail>({
     queryKey: ["etude-economique", etudeId],
-    queryFn: () => api.get(`/api/etudes-economiques/${etudeId}/`),
+    queryFn: () => api.get(`/api/economie/${etudeId}/`),
   });
 
   const { mutate: recalculer, isPending: recalcul } = useMutation({
-    mutationFn: () => api.post(`/api/etudes-economiques/${etudeId}/recalculer/`, {}),
+    mutationFn: () => api.post(`/api/economie/${etudeId}/recalculer/`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["etude-economique", etudeId] }),
   });
 
   const { mutate: dupliquer, isPending: duplication } = useMutation({
     mutationFn: (est_variante: boolean) =>
-      api.post(`/api/etudes-economiques/${etudeId}/dupliquer/`, { est_variante }),
+      api.post(`/api/economie/${etudeId}/dupliquer/`, { est_variante }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["etudes-economiques", projetId] }),
   });

@@ -56,6 +56,12 @@ urlpatterns = [
 
     # API — Supervision
     path("api/supervision/", include("applications.supervision.urls")),
+
+    # API — Analyse de rentabilité
+    path("api/rentabilite/", include("applications.rentabilite.urls")),
+
+    # API — Site vitrine public
+    path("api/site/", include("applications.site_public.urls")),
 ]
 
 # En développement : fichiers médias servis par Django

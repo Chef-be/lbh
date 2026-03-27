@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import { api } from "@/crochets/useApi";
 import {
   ArrowLeft, Calendar, MapPin, Building2, User,
-  Euro, FolderOpen, Users,
+  Euro, FolderOpen, Users, Pencil,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -136,6 +136,9 @@ export function DetailProjet({ id }: { id: string }) {
           </Link>
           <Link href={`/projets/${id}/documents`} className="btn-secondaire text-xs">
             Documents
+          </Link>
+          <Link href={`/projets/${id}/modifier`} className="btn-primaire text-xs flex items-center gap-1">
+            <Pencil size={12} /> Modifier
           </Link>
         </div>
       </div>

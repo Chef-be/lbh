@@ -4,6 +4,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Tableau de bord résumé
+    path("resume/", views.vue_resume_execution, name="execution-resume"),
+
     # Suivis d'exécution
     path("", views.VueListeSuivisExecution.as_view(), name="suivis-liste"),
     path("<uuid:pk>/", views.VueDetailSuiviExecution.as_view(), name="suivi-detail"),

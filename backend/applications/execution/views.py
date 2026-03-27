@@ -105,3 +105,62 @@ class VueDetailOrdreService(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return OrdreService.objects.filter(suivi_id=self.kwargs["suivi_id"])
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def vue_resume_execution(request):
+    """
+    Tableau de bord d'exécution : résumé des projets en cours,
+    situations à valider et ordres de service actifs.
+    """
+    suivis = SuiviExecution.objects.select_related("projet").prefetch_related(
+        "comptes_rendus", "situations", "ordres_service"
+    )
+
+    projets_en_execution = []
+    for suivi in suivis:
+        nb_cr = suivi.comptes_rendus.count()
+        nb_sit = suivi.situations.count()
+        nb_os = suivi.ordres_service.count()
+        if nb_cr + nb_sit + nb_os == 0:
+            continue
+        derniere = None
+        champs_date = [
+            (suivi.comptes_rendus, "date_creation"),
+            (suivi.situations, "date_modification"),
+            (suivi.ordres_service, "date_emission"),
+        ]
+        for qs, champ in champs_date:
+            try:
+                dernier = qs.latest(champ)
+                val = getattr(dernier, champ)
+                if hasattr(val, "date"):
+                    val = val.date()
+                if derniere is None or val > derniere:
+                    derniere = val
+            except Exception:
+                pass
+        projets_en_execution.append({
+            "projet_id": str(suivi.projet_id),
+            "projet_reference": suivi.projet.reference,
+            "projet_intitule": suivi.projet.intitule,
+            "nb_cr_chantier": nb_cr,
+            "nb_situations": nb_sit,
+            "nb_os": nb_os,
+            "derniere_activite": derniere.isoformat() if derniere else None,
+        })
+
+    total_situations_a_valider = SituationTravaux.objects.filter(
+        statut__in=["soumise", "acceptee"]
+    ).count()
+
+    total_os_en_cours = OrdreService.objects.filter(
+        type_ordre__in=["demarrage", "modification"]
+    ).count()
+
+    return Response({
+        "projets_en_execution": projets_en_execution,
+        "total_situations_a_valider": total_situations_a_valider,
+        "total_os_en_cours": total_os_en_cours,
+    })

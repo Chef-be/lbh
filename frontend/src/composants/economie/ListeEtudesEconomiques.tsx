@@ -66,7 +66,7 @@ export function ListeEtudesEconomiques({ projetId }: { projetId: string }) {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["etudes-economiques", projetId, filtreStatut],
-    queryFn: () => api.get(`/api/etudes-economiques/?${params.toString()}`),
+    queryFn: () => api.get(`/api/economie/?${params.toString()}`),
   });
 
   const etudes = data?.results ?? [];
