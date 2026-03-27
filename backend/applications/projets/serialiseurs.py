@@ -57,15 +57,21 @@ class ProjetDetailSerialiseur(serializers.ModelSerializer):
     maitre_ouvrage_nom = serializers.CharField(
         source="maitre_ouvrage.nom", read_only=True, allow_null=True,
     )
+    maitre_oeuvre_nom = serializers.CharField(
+        source="maitre_oeuvre.nom", read_only=True, allow_null=True,
+    )
+    statut_libelle = serializers.CharField(source="get_statut_display", read_only=True)
+    type_libelle = serializers.CharField(source="get_type_projet_display", read_only=True)
+    phase_libelle = serializers.CharField(source="get_phase_actuelle_display", read_only=True)
 
     class Meta:
         model = Projet
         fields = [
-            "id", "reference", "intitule", "type_projet",
-            "statut", "phase_actuelle",
+            "id", "reference", "intitule", "type_projet", "type_libelle",
+            "statut", "statut_libelle", "phase_actuelle", "phase_libelle",
             "organisation", "organisation_nom",
             "maitre_ouvrage", "maitre_ouvrage_nom",
-            "maitre_oeuvre",
+            "maitre_oeuvre", "maitre_oeuvre_nom",
             "responsable", "responsable_nom",
             "commune", "departement",
             "date_debut_prevue", "date_fin_prevue",

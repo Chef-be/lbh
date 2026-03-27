@@ -1,0 +1,110 @@
+"use client";
+
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/crochets/useApi";
+import { Search } from "lucide-react";
+import { useState } from "react";
+
+interface EtudeVoirie {
+  id: string;
+  intitule: string;
+  projet_reference: string;
+  projet: string;
+  statut: string;
+  trafic_pl_j: number | null;
+  categorie_trafic: string;
+  date_modification: string;
+}
+
+interface PageResultats {
+  count: number;
+  next: string | null;
+  results: EtudeVoirie[];
+}
+
+export function ListeEtudesVoirie() {
+  const [recherche, setRecherche] = useState("");
+  const [page, setPage] = useState(1);
+
+  const params = new URLSearchParams({ ordering: "-date_modification", page: String(page) });
+  if (recherche) params.set("search", recherche);
+
+  const { data, isLoading, isError } = useQuery<PageResultats>({
+    queryKey: ["etudes-voirie", recherche, page],
+    queryFn: () => api.get(`/api/voirie/?${params.toString()}`),
+  });
+
+  const etudes = data?.results ?? [];
+
+  return (
+    <div className="carte space-y-4">
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            placeholder="Rechercher…"
+            className="champ-saisie pl-8"
+            value={recherche}
+            onChange={(e) => { setRecherche(e.target.value); setPage(1); }}
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="py-12 text-center text-slate-400 text-sm">Chargement…</div>
+      ) : isError ? (
+        <div className="py-12 text-center text-red-500 text-sm">Erreur lors du chargement.</div>
+      ) : etudes.length === 0 ? (
+        <div className="py-12 text-center text-slate-400 text-sm">
+          <p>Aucune étude de voirie.</p>
+          <p className="mt-2 text-xs">Créez des études depuis la fiche d&apos;un projet.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 text-xs text-slate-500">
+                <th className="text-left py-2 pr-4 font-medium">Projet</th>
+                <th className="text-left py-2 pr-4 font-medium">Intitulé</th>
+                <th className="text-right py-2 pr-4 font-medium">Trafic PL/j</th>
+                <th className="text-left py-2 pr-4 font-medium">Catégorie</th>
+                <th className="text-right py-2 font-medium">Modifié</th>
+              </tr>
+            </thead>
+            <tbody>
+              {etudes.map((etude) => (
+                <tr key={etude.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                  <td className="py-3 pr-4">
+                    <Link href={`/projets/${etude.projet}`} className="font-mono text-xs text-primaire-700 hover:underline">
+                      {etude.projet_reference}
+                    </Link>
+                  </td>
+                  <td className="py-3 pr-4 font-medium">{etude.intitule}</td>
+                  <td className="py-3 pr-4 text-right font-mono text-xs">
+                    {etude.trafic_pl_j != null ? etude.trafic_pl_j.toLocaleString("fr-FR") : "—"}
+                  </td>
+                  <td className="py-3 pr-4 text-xs text-slate-500">{etude.categorie_trafic || "—"}</td>
+                  <td className="py-3 text-right text-xs text-slate-400">
+                    {new Date(etude.date_modification).toLocaleDateString("fr-FR")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data && data.count > 20 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-slate-400">{data.count} étude{data.count > 1 ? "s" : ""}</p>
+          <div className="flex gap-2">
+            <button className="btn-secondaire py-1 px-3 text-xs" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Précédent</button>
+            <button className="btn-secondaire py-1 px-3 text-xs" disabled={!data.next} onClick={() => setPage((p) => p + 1)}>Suivant →</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
