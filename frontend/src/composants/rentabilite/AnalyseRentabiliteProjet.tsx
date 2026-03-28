@@ -70,7 +70,7 @@ function PanneauSimulation({ etudeId, intitule }: { etudeId: string; intitule: s
 
   const { mutate: simuler, isPending } = useMutation({
     mutationFn: () =>
-      api.post(`/api/rentabilite/simulation/${etudeId}/`, {
+      api.post<ResultatSimulation>(`/api/rentabilite/simulation/${etudeId}/`, {
         taux_marge: Number(tauxMarge) / 100,
         taux_frais_generaux: Number(tauxFG) / 100,
         taux_aleas: Number(tauxAleas) / 100,
