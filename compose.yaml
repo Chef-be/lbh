@@ -363,6 +363,7 @@ services:
       - /var/www/vhosts/lbh-economiste.com/ressources:/ressources:ro
     environment:
       - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT}
+      - SECRET_DJANGO=${SECRET_DJANGO}
       - CELERY_COURTIER=${CELERY_COURTIER}
       - CELERY_RESULTATS=${CELERY_RESULTATS}
       - BDD_HOTE=${BDD_HOTE}
@@ -402,6 +403,7 @@ services:
       - bee-journaux:/var/log/app/celery-beat:rw
     environment:
       - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT}
+      - SECRET_DJANGO=${SECRET_DJANGO}
       - CELERY_COURTIER=${CELERY_COURTIER}
       - BDD_HOTE=${BDD_HOTE}
       - BDD_PORT=${BDD_PORT}
