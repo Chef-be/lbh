@@ -1,6 +1,8 @@
 /**
  * Crochet Zustand pour la gestion de la session utilisateur.
  * Stocke les jetons JWT et les informations de l'utilisateur connecté.
+ * Le jeton de rafraîchissement est persisté en localStorage pour survivre
+ * aux rechargements de page ; le jeton d'accès est régénéré automatiquement.
  */
 
 import { create } from "zustand";
@@ -31,6 +33,7 @@ interface EtatSession {
   // Actions
   connecter: (courriel: string, motDePasse: string) => Promise<void>;
   deconnecter: () => Promise<void>;
+  rafraichirSession: () => Promise<boolean>;
   definirUtilisateur: (utilisateur: Utilisateur) => void;
   definirJetons: (acces: string, rafraichissement: string) => void;
 }
@@ -73,13 +76,13 @@ export const useSessionStore = create<EtatSession>()(
       },
 
       deconnecter: async () => {
-        const { jetonRafraichissement } = get();
+        const { jetonRafraichissement, jetonAcces } = get();
         try {
           await fetch("/api/auth/deconnexion/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${get().jetonAcces}`,
+              Authorization: `Bearer ${jetonAcces}`,
             },
             body: JSON.stringify({ rafraichissement: jetonRafraichissement }),
           });
@@ -94,18 +97,64 @@ export const useSessionStore = create<EtatSession>()(
         });
       },
 
+      /**
+       * Régénère le jeton d'accès à partir du jeton de rafraîchissement.
+       * Appelé automatiquement au chargement de l'espace privé.
+       * Retourne true si succès, false si le jeton est expiré (→ déconnexion).
+       */
+      rafraichirSession: async (): Promise<boolean> => {
+        const { jetonRafraichissement, estConnecte } = get();
+
+        if (!estConnecte || !jetonRafraichissement) {
+          set({
+            utilisateur: null,
+            jetonAcces: null,
+            jetonRafraichissement: null,
+            estConnecte: false,
+          });
+          return false;
+        }
+
+        try {
+          const reponse = await fetch("/api/auth/rafraichir/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // simplejwt attend le champ "refresh"
+            body: JSON.stringify({ refresh: jetonRafraichissement }),
+          });
+
+          if (reponse.ok) {
+            const donnees = await reponse.json();
+            set({ jetonAcces: donnees.access });
+            return true;
+          } else {
+            // Jeton expiré ou invalide → forcer la déconnexion
+            set({
+              utilisateur: null,
+              jetonAcces: null,
+              jetonRafraichissement: null,
+              estConnecte: false,
+            });
+            return false;
+          }
+        } catch {
+          // Erreur réseau — on ne déconnecte pas pour éviter une boucle offline
+          return false;
+        }
+      },
+
       definirUtilisateur: (utilisateur) => set({ utilisateur }),
       definirJetons: (acces, rafraichissement) =>
         set({ jetonAcces: acces, jetonRafraichissement: rafraichissement }),
     }),
     {
       name: "session-bee",
-      // Persister uniquement les données non sensibles
+      // Persister le jeton de rafraîchissement pour survivre aux rechargements.
+      // Le jeton d'accès (court) sera régénéré automatiquement au chargement.
       partialize: (etat) => ({
         utilisateur: etat.utilisateur,
         estConnecte: etat.estConnecte,
-        // Les jetons sont volontairement exclus de localStorage
-        // pour les régénérer à chaque session navigateur
+        jetonRafraichissement: etat.jetonRafraichissement,
       }),
     }
   )

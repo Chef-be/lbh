@@ -3,15 +3,20 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { clsx } from "clsx";
+import { api } from "@/crochets/useApi";
 
 interface ProjetResume {
   id: string;
   reference: string;
   intitule: string;
   statut: string;
-  organisation_nom: string;
+  organisation_nom: string | null;
   montant_estime: number | null;
   date_modification: string;
+}
+
+interface ReponsePaginee {
+  results?: ProjetResume[];
 }
 
 const LIBELLES_STATUT: Record<string, string> = {
@@ -33,16 +38,15 @@ const STYLES_STATUT: Record<string, string> = {
 };
 
 async function chargerProjetsRecents(): Promise<ProjetResume[]> {
-  const reponse = await fetch("/api/projets/?ordering=-date_modification", {
-    headers: { Authorization: `Bearer ${sessionStorage.getItem("jeton_acces") || ""}` },
-  });
-  if (!reponse.ok) return [];
-  const donnees = await reponse.json();
-  return (donnees.results || donnees).slice(0, 10);
+  const donnees = await api.get<ReponsePaginee | ProjetResume[]>(
+    "/api/projets/?ordering=-date_modification&page_size=10"
+  );
+  const liste = (donnees as ReponsePaginee).results ?? (donnees as ProjetResume[]);
+  return liste.slice(0, 10);
 }
 
 export function ListeProjetsRecents() {
-  const { data: projets = [], isLoading } = useQuery({
+  const { data: projets = [], isLoading, isError } = useQuery({
     queryKey: ["projets-recents"],
     queryFn: chargerProjetsRecents,
   });
@@ -51,6 +55,14 @@ export function ListeProjetsRecents() {
     return (
       <div className="flex items-center justify-center py-8 text-slate-400 text-sm">
         Chargement des projets…
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-8 text-slate-400 text-sm">
+        Impossible de charger les projets.
       </div>
     );
   }
@@ -90,7 +102,9 @@ export function ListeProjetsRecents() {
               </td>
               <td className="py-3 pr-4 max-w-xs">
                 <p className="truncate text-slate-800">{projet.intitule}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{projet.organisation_nom}</p>
+                {projet.organisation_nom && (
+                  <p className="text-xs text-slate-400 mt-0.5">{projet.organisation_nom}</p>
+                )}
               </td>
               <td className="py-3 pr-4">
                 <span className={clsx(STYLES_STATUT[projet.statut] || "badge-neutre")}>

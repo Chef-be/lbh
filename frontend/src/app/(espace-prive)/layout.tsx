@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/crochets/useSession";
 import { BarreNavigation } from "@/composants/navigation/BarreNavigation";
@@ -12,13 +12,48 @@ export default function MiseEnPageEspacePrivé({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { estConnecte } = useSessionStore();
+  const { estConnecte, jetonAcces, rafraichirSession } = useSessionStore();
+  const [initialisation, setInitialisation] = useState(true);
 
   useEffect(() => {
-    if (!estConnecte) {
-      router.replace("/connexion");
-    }
-  }, [estConnecte, router]);
+    const preparer = async () => {
+      if (!estConnecte) {
+        router.replace("/connexion");
+        setInitialisation(false);
+        return;
+      }
+
+      // Si connecté mais sans jeton d'accès (rechargement de page),
+      // tenter de régénérer le jeton via le jeton de rafraîchissement.
+      if (!jetonAcces) {
+        const succes = await rafraichirSession();
+        if (!succes) {
+          router.replace("/connexion");
+          setInitialisation(false);
+          return;
+        }
+      }
+
+      setInitialisation(false);
+    };
+
+    preparer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pendant l'initialisation, afficher un écran de chargement neutre
+  if (initialisation) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primaire-600 flex items-center justify-center animate-pulse">
+            <span className="text-white font-bold text-sm">B</span>
+          </div>
+          <p className="text-sm text-slate-500">Chargement de votre espace…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!estConnecte) {
     return null;

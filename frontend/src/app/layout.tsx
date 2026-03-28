@@ -8,11 +8,12 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Plateforme BEE",
-    template: "%s | Plateforme BEE",
+    default: "BEE — Bureau d'Études Économiste",
+    template: "%s | BEE",
   },
-  description: "Bureau d'Études Économiste — Plateforme de gestion de projets",
-  robots: "noindex, nofollow", // Interface privée
+  description:
+    "Bureau d'études spécialisé en économie de la construction, dimensionnement voirie et pré-dimensionnement bâtiment.",
+  // Pas de directive robots globale — chaque page ou groupe la définit
 };
 
 export default function MiseEnPageRacine({
