@@ -19,7 +19,7 @@ const couleursParType: Record<PropsTuile["couleur"], string> = {
 };
 
 async function chargerStatistiques() {
-  return api.get("/api/projets/statistiques/");
+  return api.get<Record<string, number>>("/api/projets/statistiques/");
 }
 
 export function TuileStatistique({ libelle, codeStatistique, couleur }: PropsTuile) {
