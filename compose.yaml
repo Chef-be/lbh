@@ -115,10 +115,6 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
-    volumes:
-      - ./frontend:/app:rw
-      - /app/node_modules
-      - /app/.next
     environment:
       - NODE_ENV=${ENVIRONNEMENT}
       - TZ=${FUSEAU_HORAIRE}
@@ -127,6 +123,7 @@ services:
       - NEXT_PUBLIC_API_URL=/api
       - NEXT_PUBLIC_NOM_PLATEFORME=${NOM_PLATEFORME}
       - NEXT_PUBLIC_PREFIXE=${PREFIXE_CONTENEURS}
+      - HOSTNAME=0.0.0.0
     depends_on:
       bee-backend:
         condition: service_healthy
@@ -174,6 +171,7 @@ services:
       - REDIS_HOTE=${REDIS_HOTE}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_MOT_DE_PASSE=${REDIS_MOT_DE_PASSE}
+      - URL_REDIS=${URL_REDIS}
       - CELERY_COURTIER=${CELERY_COURTIER}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_ACCES_CLE=${MINIO_ACCES_CLE}
@@ -182,6 +180,7 @@ services:
       - COURRIEL_HOTE_SMTP=${COURRIEL_HOTE_SMTP}
       - COURRIEL_PORT_SMTP=${COURRIEL_PORT_SMTP}
       - COURRIEL_TLS=${COURRIEL_TLS}
+      - COURRIEL_SSL=${COURRIEL_SSL}
       - COURRIEL_UTILISATEUR=${COURRIEL_UTILISATEUR}
       - COURRIEL_MOT_DE_PASSE=${COURRIEL_MOT_DE_PASSE}
       - TZ=${FUSEAU_HORAIRE}
@@ -366,6 +365,9 @@ services:
       - SECRET_DJANGO=${SECRET_DJANGO}
       - CELERY_COURTIER=${CELERY_COURTIER}
       - CELERY_RESULTATS=${CELERY_RESULTATS}
+      - URL_REDIS=${URL_REDIS}
+      - REDIS_HOTE=${REDIS_HOTE}
+      - REDIS_PORT=${REDIS_PORT}
       - BDD_HOTE=${BDD_HOTE}
       - BDD_PORT=${BDD_PORT}
       - BDD_NOM=${BDD_NOM}
@@ -382,6 +384,12 @@ services:
         condition: service_healthy
     networks:
       - bee-reseau
+    healthcheck:
+      test: ["CMD", "celery", "-A", "configuration", "inspect", "ping", "--timeout=10"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
     logging:
       driver: json-file
       options:
@@ -405,6 +413,9 @@ services:
       - DJANGO_SETTINGS_MODULE=configuration.parametres.${ENVIRONNEMENT}
       - SECRET_DJANGO=${SECRET_DJANGO}
       - CELERY_COURTIER=${CELERY_COURTIER}
+      - URL_REDIS=${URL_REDIS}
+      - REDIS_HOTE=${REDIS_HOTE}
+      - REDIS_PORT=${REDIS_PORT}
       - BDD_HOTE=${BDD_HOTE}
       - BDD_PORT=${BDD_PORT}
       - BDD_NOM=${BDD_NOM}
@@ -418,6 +429,12 @@ services:
         condition: service_healthy
     networks:
       - bee-reseau
+    healthcheck:
+      test: ["CMD", "python", "-c", "import celery; print('ok')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     logging:
       driver: json-file
       options:

@@ -7,6 +7,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from health_check.views import HealthCheckView
 
 # URL admin personnalisée (définie dans les paramètres, jamais /admin/ en production)
 _url_admin = getattr(settings, "ADMIN_URL", "admin-bee/")
@@ -64,7 +65,12 @@ urlpatterns = [
     path("api/site/", include("applications.site_public.urls")),
 
     # Vérification de santé (django-health-check)
-    path("api/sante/", include("health_check.urls")),
+    # On exclut le contrôle courrier (SMTP non critique pour la disponibilité)
+    path("api/sante/", HealthCheckView.as_view(checks=[
+        "health_check.checks.Cache",
+        "health_check.checks.Database",
+        "health_check.checks.Storage",
+    ]), name="sante"),
 ]
 
 # En développement : fichiers médias servis par Django

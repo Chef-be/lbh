@@ -313,6 +313,7 @@ LOGGING = {
             "maxBytes": 10 * 1024 * 1024,
             "backupCount": 5,
             "formatter": "verbose",
+            "delay": True,
         },
     },
     "root": {
