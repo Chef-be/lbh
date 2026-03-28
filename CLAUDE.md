@@ -6,7 +6,7 @@
 ## 1. CONTEXTE DU PROJET
 
 **Nom du projet :** Plateforme BEE (Bureau d'Études Économiste)
-**Répertoire principal :** `/var/www/vhosts/lbh-economiste.com/plateforme-bee`
+**Répertoire principal :** `/var/www/vhosts/lbh-economiste.com/httpdocs`
 **Répertoire ressources :** `/var/www/vhosts/lbh-economiste.com/ressources`
 **Serveur :** Debian 12 / Plesk Obsidian / Docker Compose
 **Environnement d'exécution :** root sur serveur dédié distant

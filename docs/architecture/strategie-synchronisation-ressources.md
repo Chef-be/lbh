@@ -181,13 +181,13 @@ Structure :
 ls -la /var/www/vhosts/lbh-economiste.com/ressources/entree/
 
 # Lancer l'ingestion manuellement
-docker compose -f /var/www/vhosts/lbh-economiste.com/plateforme-bee/compose.yaml \
+docker compose -f /var/www/vhosts/lbh-economiste.com/httpdocs/compose.yaml \
   exec bee-backend python manage.py ingerer_ressources
 
 # Voir le catalogue après ingestion
 cat /var/www/vhosts/lbh-economiste.com/ressources/indexation/catalogue.csv | column -t -s ","
 
 # Vérifier les journaux d'ingestion
-docker compose -f /var/www/vhosts/lbh-economiste.com/plateforme-bee/compose.yaml \
+docker compose -f /var/www/vhosts/lbh-economiste.com/httpdocs/compose.yaml \
   logs bee-backend | grep ingestion
 ```

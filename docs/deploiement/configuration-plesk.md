@@ -71,7 +71,7 @@ Si Docker est géré via l'interface Plesk :
 2. Le compose.yaml se gère via SSH directement :
 
 ```bash
-cd /var/www/vhosts/lbh-economiste.com/plateforme-bee
+cd /var/www/vhosts/lbh-economiste.com/httpdocs
 docker compose up -d
 ```
 
@@ -148,5 +148,5 @@ gzip /tmp/bee-sauvegarde-*.sql
 
 # Déplacer vers un répertoire sécurisé
 mv /tmp/bee-sauvegarde-*.sql.gz \
-   /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/sauvegardes/
+   /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/sauvegardes/
 ```

@@ -548,14 +548,18 @@ def api_executer_installation():
 
     elif etape == "superadmin":
         try:
+            courriel_admin = config["admin_courriel"]
+            mot_de_passe_admin = config["admin_mot_de_passe"]
+            prenom_admin = config["admin_prenom"]
+            nom_admin = config["admin_nom"]
             commande_creation = (
                 f"from applications.comptes.models import Utilisateur; "
                 f"Utilisateur.objects.create_superuser("
-                f"courriel='{config[\"admin_courriel\"]}', "
-                f"password='{config[\"admin_mot_de_passe\"]}', "
-                f"prenom='{config[\"admin_prenom\"]}', "
-                f"nom='{config[\"admin_nom\"]}'"
-                f") if not Utilisateur.objects.filter(courriel='{config[\"admin_courriel\"]}').exists() else print('Déjà créé')"
+                f"courriel='{courriel_admin}', "
+                f"password='{mot_de_passe_admin}', "
+                f"prenom='{prenom_admin}', "
+                f"nom='{nom_admin}'"
+                f") if not Utilisateur.objects.filter(courriel='{courriel_admin}').exists() else print('Déjà créé')"
             )
             r = subprocess.run(
                 ["docker", "compose", "-f", str(FICHIER_COMPOSE), "exec", "-T",

@@ -82,8 +82,8 @@ Tout s'organise autour du **projet** : documents, plans, métrés, calculs, prix
 L'installateur par navigateur est disponible après la première construction :
 
 ```bash
-cd /var/www/vhosts/lbh-economiste.com/plateforme-bee
-docker compose up bee-installateur
+cd /var/www/vhosts/lbh-economiste.com/httpdocs
+docker compose -f compose.installateur.yaml up
 ```
 
 Puis accéder à : `http://[domaine]/installer/`

@@ -9,7 +9,7 @@
 
 **Modèle recommandé :** claude-sonnet-4-6 (défaut), claude-opus-4-6 pour les tâches complexes de conception.
 
-**Répertoire de travail :** `/var/www/vhosts/lbh-economiste.com/plateforme-bee`
+**Répertoire de travail :** `/var/www/vhosts/lbh-economiste.com/httpdocs`
 
 ---
 

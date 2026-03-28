@@ -25,37 +25,37 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/postgresql
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/postgresql
   bee-donnees-redis:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/redis
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/redis
   bee-donnees-minio:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/minio
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/minio
   bee-journaux:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/journaux
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/journaux
   bee-medias:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/medias
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/medias
   bee-statiques:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /var/www/vhosts/lbh-economiste.com/plateforme-bee/volumes/statiques
+      device: /var/www/vhosts/lbh-economiste.com/httpdocs/volumes/statiques
 
 # ------------------------------------------------------------
 # RÉSEAU DÉDIÉ
