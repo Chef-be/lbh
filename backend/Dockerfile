@@ -32,6 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # LibreOffice pour la conversion DOCX → PDF
     libreoffice \
     libreoffice-writer \
+    # GDAL / GEOS / PROJ pour Django GeoDjango + PostGIS
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
     # Outils réseau
     curl \
     # Nettoyage
