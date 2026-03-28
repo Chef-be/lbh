@@ -62,6 +62,9 @@ urlpatterns = [
 
     # API — Site vitrine public
     path("api/site/", include("applications.site_public.urls")),
+
+    # Vérification de santé (django-health-check)
+    path("api/sante/", include("health_check.urls")),
 ]
 
 # En développement : fichiers médias servis par Django
