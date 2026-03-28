@@ -70,7 +70,7 @@ echo " Démarrage du serveur Gunicorn..."
 echo "----------------------------------------------"
 
 # Démarrer Gunicorn
-exec gunicorn configuration.wsgi:application \
+exec gunicorn noyau.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 4 \
     --worker-class gthread \

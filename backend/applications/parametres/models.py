@@ -214,6 +214,13 @@ class FonctionnaliteActivable(models.Model):
         ("profil", "Profil de droits"),
     ]
 
+    module = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Module",
+        help_text="Module applicatif auquel appartient cette fonctionnalité.",
+    )
     code = models.CharField(
         max_length=100,
         unique=True,
