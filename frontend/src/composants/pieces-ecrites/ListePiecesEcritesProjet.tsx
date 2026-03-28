@@ -33,7 +33,7 @@ export function ListePiecesEcritesProjet({ projetId }: { projetId: string }) {
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["pieces-ecrites-projet", projetId],
     queryFn: () =>
-      api.get(`/api/pieces-ecrites/?projet=${projetId}&ordering=-date_modification`),
+      api.get<PageResultats>(`/api/pieces-ecrites/?projet=${projetId}&ordering=-date_modification`),
   });
 
   const { mutate: valider, variables: validationEnCours } = useMutation({

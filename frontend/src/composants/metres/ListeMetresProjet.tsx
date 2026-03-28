@@ -37,7 +37,7 @@ export function ListeMetresProjet({ projetId }: { projetId: string }) {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["metres-projet", projetId],
-    queryFn: () => api.get(`/api/metres/?projet=${projetId}&ordering=-date_modification`),
+    queryFn: () => api.get<PageResultats>(`/api/metres/?projet=${projetId}&ordering=-date_modification`),
   });
 
   const { mutate: valider, variables: validationEnCours } = useMutation({

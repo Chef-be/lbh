@@ -40,7 +40,7 @@ export function ListeMetres() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["metres", recherche, page],
-    queryFn: () => api.get(`/api/metres/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/metres/?${params.toString()}`),
   });
 
   const metres = data?.results ?? [];

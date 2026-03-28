@@ -86,7 +86,7 @@ function OngletComptesRendus({ suiviId }: { suiviId: string }) {
 
   const { data } = useQuery<{ results: CompteRendu[] }>({
     queryKey: ["comptes-rendus", suiviId],
-    queryFn: () => api.get(`/api/execution/${suiviId}/comptes-rendus/?ordering=-date_reunion`),
+    queryFn: () => api.get<{ results: CompteRendu[] }>(`/api/execution/${suiviId}/comptes-rendus/?ordering=-date_reunion`),
   });
 
   const { mutate: creer, isPending } = useMutation({
@@ -178,7 +178,7 @@ function OngletSituations({ suiviId }: { suiviId: string }) {
 
   const { data } = useQuery<{ results: Situation[] }>({
     queryKey: ["situations", suiviId],
-    queryFn: () => api.get(`/api/execution/${suiviId}/situations/?ordering=-numero`),
+    queryFn: () => api.get<{ results: Situation[] }>(`/api/execution/${suiviId}/situations/?ordering=-numero`),
   });
 
   const { mutate: valider, variables: validationEnCours } = useMutation({
@@ -253,7 +253,7 @@ function OngletOrdresService({ suiviId }: { suiviId: string }) {
 
   const { data } = useQuery<{ results: OrdreService[] }>({
     queryKey: ["ordres-service", suiviId],
-    queryFn: () => api.get(`/api/execution/${suiviId}/ordres-service/?ordering=-date_emission`),
+    queryFn: () => api.get<{ results: OrdreService[] }>(`/api/execution/${suiviId}/ordres-service/?ordering=-date_emission`),
   });
 
   const { mutate: creer, isPending } = useMutation({
@@ -355,8 +355,8 @@ export function SuiviExecutionProjet({ projetId }: { projetId: string }) {
 
   const { data: suivi, isLoading, isError } = useQuery<SuiviExecution>({
     queryKey: ["suivi-execution", projetId],
-    queryFn: () => api.get(`/api/execution/?projet=${projetId}`).then(
-      (d: { results?: SuiviExecution[] }) => {
+    queryFn: () => api.get<{ results?: SuiviExecution[] }>(`/api/execution/?projet=${projetId}`).then(
+      (d) => {
         const liste = d.results ?? [];
         if (liste.length > 0) return liste[0];
         throw new Error("no_suivi");

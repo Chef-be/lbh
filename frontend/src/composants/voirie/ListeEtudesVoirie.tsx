@@ -33,7 +33,7 @@ export function ListeEtudesVoirie() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["etudes-voirie", recherche, page],
-    queryFn: () => api.get(`/api/voirie/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/voirie/?${params.toString()}`),
   });
 
   const etudes = data?.results ?? [];

@@ -45,7 +45,7 @@ function formaterMontant(val: number | null) {
 export function ListeAppelsOffresProjet({ projetId }: { projetId: string }) {
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["appels-offres-projet", projetId],
-    queryFn: () => api.get(`/api/appels-offres/?projet=${projetId}&ordering=-date_creation`),
+    queryFn: () => api.get<PageResultats>(`/api/appels-offres/?projet=${projetId}&ordering=-date_creation`),
   });
 
   const aos = data?.results ?? [];

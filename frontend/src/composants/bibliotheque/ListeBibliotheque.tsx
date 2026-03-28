@@ -53,7 +53,7 @@ export function ListeBibliotheque() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["bibliotheque", recherche, filtreStatut, page],
-    queryFn: () => api.get(`/api/bibliotheque/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/bibliotheque/?${params.toString()}`),
   });
 
   const lignes = data?.results ?? [];

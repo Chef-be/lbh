@@ -33,7 +33,7 @@ export function FormulaireNouvelleEtude({ projetId }: { projetId: string }) {
 
   const { data: projet } = useQuery<ProjetLots>({
     queryKey: ["projet", projetId],
-    queryFn: () => api.get(`/api/projets/${projetId}/`),
+    queryFn: () => api.get<ProjetLots>(`/api/projets/${projetId}/`),
     select: (data: ProjetLots) => data,
   });
 

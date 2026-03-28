@@ -37,7 +37,7 @@ export function ListeEtudesBatiment() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["etudes-batiment", recherche, page],
-    queryFn: () => api.get(`/api/batiment/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/batiment/?${params.toString()}`),
   });
 
   const etudes = data?.results ?? [];

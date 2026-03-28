@@ -192,7 +192,7 @@ export function DetailProgrammeBatiment({
 
   const { data: programme, isLoading, isError } = useQuery<ProgrammeBatiment>({
     queryKey: ["programme-batiment", programmeId],
-    queryFn: () => api.get(`/api/batiment/${programmeId}/`),
+    queryFn: () => api.get<ProgrammeBatiment>(`/api/batiment/${programmeId}/`),
   });
 
   const { mutate: calculer, isPending } = useMutation({

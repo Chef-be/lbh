@@ -57,7 +57,7 @@ export function ListeDocumentsGlobale() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["documents-globale", recherche, filtreStatut, versionsCourantes, page],
-    queryFn: () => api.get(`/api/documents/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/documents/?${params.toString()}`),
   });
 
   const documents = data?.results ?? [];

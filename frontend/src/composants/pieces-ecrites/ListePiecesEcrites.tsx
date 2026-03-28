@@ -41,7 +41,7 @@ export function ListePiecesEcrites() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["pieces-ecrites", recherche, page],
-    queryFn: () => api.get(`/api/pieces-ecrites/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/pieces-ecrites/?${params.toString()}`),
   });
 
   const pieces = data?.results ?? [];

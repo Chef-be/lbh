@@ -40,7 +40,7 @@ export function FormulaireModifierProjet({ projetId }: { projetId: string }) {
 
   const { data: projet, isLoading } = useQuery<ProjetDetail>({
     queryKey: ["projet", projetId],
-    queryFn: () => api.get(`/api/projets/${projetId}/`),
+    queryFn: () => api.get<ProjetDetail>(`/api/projets/${projetId}/`),
   });
 
   const { data: organisations = [] } = useQuery<Organisation[]>({

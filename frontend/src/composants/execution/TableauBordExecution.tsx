@@ -48,7 +48,7 @@ function TuileChiffre({
 export function TableauBordExecution() {
   const { data, isLoading, isError } = useQuery<ResumeExecution>({
     queryKey: ["execution-resume"],
-    queryFn: () => api.get("/api/execution/resume/"),
+    queryFn: () => api.get<ResumeExecution>("/api/execution/resume/"),
   });
 
   if (isLoading) {

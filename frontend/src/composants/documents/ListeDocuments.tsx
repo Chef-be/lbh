@@ -64,7 +64,7 @@ export function ListeDocuments({ projetId }: { projetId: string }) {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["documents", projetId, filtreStatut, versionsCourantes],
-    queryFn: () => api.get(`/api/documents/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/documents/?${params.toString()}`),
   });
 
   const documents = data?.results ?? [];

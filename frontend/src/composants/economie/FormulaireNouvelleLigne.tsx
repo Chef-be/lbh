@@ -57,7 +57,7 @@ export function FormulaireNouvelleLigne({
   // Recherche dans la bibliothèque
   const { data: resultsBiblio } = useQuery<{ results: LigneBibliotheque[] }>({
     queryKey: ["bibliotheque-recherche", rechercheBiblio],
-    queryFn: () => api.get(`/api/bibliotheque/?search=${encodeURIComponent(rechercheBiblio)}&statut=valide`),
+    queryFn: () => api.get<{ results: LigneBibliotheque[] }>(`/api/bibliotheque/?search=${encodeURIComponent(rechercheBiblio)}&statut=valide`),
     enabled: rechercheBiblio.length >= 2,
   });
 

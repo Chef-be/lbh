@@ -100,7 +100,7 @@ export function DetailEtudeEconomique({
 
   const { data: etude, isLoading, isError } = useQuery<EtudeDetail>({
     queryKey: ["etude-economique", etudeId],
-    queryFn: () => api.get(`/api/economie/${etudeId}/`),
+    queryFn: () => api.get<EtudeDetail>(`/api/economie/${etudeId}/`),
   });
 
   const { mutate: recalculer, isPending: recalcul } = useMutation({

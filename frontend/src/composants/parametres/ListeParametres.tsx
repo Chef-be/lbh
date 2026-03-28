@@ -113,7 +113,7 @@ function LigneParametre({ parametre }: { parametre: Parametre }) {
 export function ListeParametres() {
   const { data: parametres = [], isLoading, isError } = useQuery<Parametre[]>({
     queryKey: ["parametres"],
-    queryFn: () => api.get("/api/parametres/"),
+    queryFn: () => api.get<Parametre[]>("/api/parametres/"),
     select: (data) => Array.isArray(data) ? data : (data as { results?: Parametre[] }).results ?? [],
   });
 

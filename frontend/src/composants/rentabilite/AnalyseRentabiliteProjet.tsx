@@ -145,7 +145,7 @@ export function AnalyseRentabiliteProjet({ projetId }: { projetId: string }) {
 
   const { data, isLoading, isError } = useQuery<AnalyseRentabilite>({
     queryKey: ["rentabilite-projet", projetId],
-    queryFn: () => api.get(`/api/rentabilite/projet/${projetId}/`),
+    queryFn: () => api.get<AnalyseRentabilite>(`/api/rentabilite/projet/${projetId}/`),
   });
 
   if (isLoading) {

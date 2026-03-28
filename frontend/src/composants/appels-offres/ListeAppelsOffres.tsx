@@ -46,7 +46,7 @@ export function ListeAppelsOffres() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["appels-offres", recherche, page],
-    queryFn: () => api.get(`/api/appels-offres/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/appels-offres/?${params.toString()}`),
   });
 
   const aos = data?.results ?? [];

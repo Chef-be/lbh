@@ -90,7 +90,7 @@ function formaterMontant(val: number | null) {
 export function DetailProjet({ id }: { id: string }) {
   const { data: projet, isLoading, isError } = useQuery<ProjetDetail>({
     queryKey: ["projet", id],
-    queryFn: () => api.get(`/api/projets/${id}/`),
+    queryFn: () => api.get<ProjetDetail>(`/api/projets/${id}/`),
   });
 
   if (isLoading) {

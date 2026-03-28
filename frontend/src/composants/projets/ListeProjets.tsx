@@ -79,7 +79,7 @@ export function ListeProjets() {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["projets", recherche, filtreStatut, page],
-    queryFn: () => api.get(`/api/projets/?${params.toString()}`),
+    queryFn: () => api.get<PageResultats>(`/api/projets/?${params.toString()}`),
   });
 
   const projets = data?.results ?? [];

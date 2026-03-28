@@ -31,7 +31,7 @@ export function ListeEtudesBatimentProjet({ projetId }: { projetId: string }) {
 
   const { data, isLoading, isError } = useQuery<PageResultats>({
     queryKey: ["etudes-batiment-projet", projetId],
-    queryFn: () => api.get(`/api/batiment/?projet=${projetId}&ordering=-date_modification`),
+    queryFn: () => api.get<PageResultats>(`/api/batiment/?projet=${projetId}&ordering=-date_modification`),
   });
 
   const { mutate: calculer, variables: calculsEnCours } = useMutation({

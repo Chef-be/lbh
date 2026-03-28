@@ -64,7 +64,7 @@ export function TableauBordSupervision() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery<TableauBord>({
     queryKey: ["supervision-tableau-bord"],
-    queryFn: () => api.get("/api/supervision/"),
+    queryFn: () => api.get<TableauBord>("/api/supervision/"),
     refetchInterval: 60_000, // Rafraîchissement automatique toutes les 60 s
   });
 

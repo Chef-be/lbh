@@ -60,7 +60,7 @@ export function DetailEtudeVoirie({ projetId, etudeId }: { projetId: string; etu
 
   const { data: etude, isLoading, isError } = useQuery<EtudeVoirie>({
     queryKey: ["etude-voirie", etudeId],
-    queryFn: () => api.get(`/api/voirie/${etudeId}/`),
+    queryFn: () => api.get<EtudeVoirie>(`/api/voirie/${etudeId}/`),
   });
 
   const { mutate: calculer, isPending } = useMutation({
