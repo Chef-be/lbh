@@ -91,7 +91,7 @@ function LigneParametre({ parametre }: { parametre: Parametre }) {
       </td>
       <td className="py-3 text-right">
         {parametre.verrouille ? (
-          <Lock size={14} className="text-slate-300 ml-auto" title="Verrouillé" />
+          <Lock size={14} className="text-slate-300 ml-auto" aria-label="Verrouillé" />
         ) : !edition ? (
           <button
             onClick={() => setEdition(true)}
