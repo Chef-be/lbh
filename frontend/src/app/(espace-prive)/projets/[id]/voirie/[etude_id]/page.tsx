@@ -7,23 +7,24 @@ export const metadata: Metadata = {
   title: "Étude de voirie",
 };
 
-export default function PageDetailEtudeVoirie({
+export default async function PageDetailEtudeVoirie({
   params,
 }: {
-  params: { id: string; etude_id: string };
+  params: Promise<{ id: string; etude_id: string }>;
 }) {
+  const { id, etude_id } = await params;
   return (
     <div className="space-y-6">
       <div>
         <Link
-          href={`/projets/${params.id}/voirie`}
+          href={`/projets/${id}/voirie`}
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2"
         >
           <ArrowLeft size={14} /> Voirie
         </Link>
         <h1>Dimensionnement de chaussée</h1>
       </div>
-      <DetailEtudeVoirie projetId={params.id} etudeId={params.etude_id} />
+      <DetailEtudeVoirie projetId={id} etudeId={etude_id} />
     </div>
   );
 }

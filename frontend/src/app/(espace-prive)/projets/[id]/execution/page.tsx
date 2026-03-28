@@ -7,12 +7,13 @@ export const metadata: Metadata = {
   title: "Suivi d'exécution",
 };
 
-export default function PageExecutionProjet({ params }: { params: { id: string } }) {
+export default async function PageExecutionProjet({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <div className="space-y-6">
       <div>
         <Link
-          href={`/projets/${params.id}`}
+          href={`/projets/${id}`}
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2"
         >
           <ArrowLeft size={14} /> Fiche projet
@@ -22,7 +23,7 @@ export default function PageExecutionProjet({ params }: { params: { id: string }
           Comptes rendus de chantier, situations de travaux, ordres de service
         </p>
       </div>
-      <SuiviExecutionProjet projetId={params.id} />
+      <SuiviExecutionProjet projetId={id} />
     </div>
   );
 }

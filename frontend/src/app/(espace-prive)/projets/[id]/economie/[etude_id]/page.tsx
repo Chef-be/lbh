@@ -5,10 +5,11 @@ export const metadata: Metadata = {
   title: "Étude économique",
 };
 
-export default function PageDetailEtude({
+export default async function PageDetailEtude({
   params,
 }: {
-  params: { id: string; etude_id: string };
+  params: Promise<{ id: string; etude_id: string }>;
 }) {
-  return <DetailEtudeEconomique projetId={params.id} etudeId={params.etude_id} />;
+  const { id, etude_id } = await params;
+  return <DetailEtudeEconomique projetId={id} etudeId={etude_id} />;
 }
