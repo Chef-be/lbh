@@ -4,7 +4,7 @@
 # ============================================================
 
 # --- Framework principal ---
-Django==5.1.7
+Django==5.2
 djangorestframework==3.15.2
 django-cors-headers==4.6.0
 django-filter==24.3
@@ -19,7 +19,7 @@ django-extensions==3.2.3
 
 # --- File d'attente et tâches asynchrones ---
 celery==5.4.0
-django-celery-beat==2.7.0
+django-celery-beat==2.9.0
 django-celery-results==2.5.1
 redis==5.2.1
 
@@ -39,7 +39,7 @@ PyMuPDF==1.25.3
 pdfplumber==0.11.5
 
 # --- Traitement CAO ---
-ezdxf==1.3.6
+ezdxf==1.4.3
 
 # --- OCR ---
 pytesseract==0.3.13
@@ -55,7 +55,6 @@ Shapely==2.0.7
 
 # --- Webmail ---
 IMAPClient==3.0.1
-smtplib2==0.3.0
 
 # --- Validation et sérialisation ---
 marshmallow==3.23.1
