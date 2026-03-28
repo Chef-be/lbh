@@ -12,12 +12,13 @@
 # ============================================================
 
 import os
+import re
 import sys
 import json
+import time
 import socket
 import subprocess
 import secrets
-import hashlib
 import datetime
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
@@ -198,11 +199,111 @@ def ports_suggeres(prefixe: str) -> dict:
 
 def normaliser_prefixe(prefixe: str) -> str:
     """Normalise le préfixe : minuscules, tirets, sans caractères spéciaux."""
-    import re
     prefixe = prefixe.lower().strip()
     prefixe = re.sub(r"[^a-z0-9-]", "-", prefixe)
     prefixe = re.sub(r"-+", "-", prefixe).strip("-")
     return prefixe or "plateforme"
+
+
+# ------------------------------------------------------------
+# Détection d'une installation existante
+# ------------------------------------------------------------
+def detecter_plateforme_existante() -> dict:
+    """
+    Détecte si une installation BEE est déjà déployée sur ce serveur.
+    Lit le compose.yaml existant pour extraire le préfixe,
+    interroge Docker pour l'état des conteneurs,
+    et vérifie si un super-administrateur existe.
+
+    Retourne un dict avec :
+    - compose_existe (bool)
+    - prefixe (str|None)
+    - conteneurs (list) — liste des dicts par service
+    - tous_sains (bool)
+    - certains_actifs (bool)
+    - nb_sains / nb_total (int)
+    - admin_existe (bool)
+    """
+    resultat = {
+        "compose_existe": FICHIER_COMPOSE.exists(),
+        "prefixe": None,
+        "conteneurs": [],
+        "tous_sains": False,
+        "certains_actifs": False,
+        "nb_sains": 0,
+        "nb_total": 0,
+        "admin_existe": False,
+    }
+
+    if not FICHIER_COMPOSE.exists():
+        return resultat
+
+    # Extraire le préfixe depuis le champ "name:" du compose.yaml
+    try:
+        with open(FICHIER_COMPOSE) as f:
+            contenu = f.read()
+        m = re.search(r"^name:\s*(\S+)", contenu, re.MULTILINE)
+        if m:
+            resultat["prefixe"] = m.group(1)
+    except Exception:
+        pass
+
+    # Interroger Docker Compose sur l'état des conteneurs
+    try:
+        r = subprocess.run(
+            ["docker", "compose", "-f", str(FICHIER_COMPOSE), "ps", "--format", "json"],
+            capture_output=True, text=True, timeout=15, cwd=str(RACINE_PROJET)
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            conteneurs = []
+            for ligne in r.stdout.strip().split("\n"):
+                if ligne.strip():
+                    try:
+                        conteneurs.append(json.loads(ligne))
+                    except json.JSONDecodeError:
+                        pass
+            resultat["conteneurs"] = conteneurs
+            resultat["nb_total"] = len(conteneurs)
+            resultat["nb_sains"] = sum(
+                1 for c in conteneurs if "healthy" in c.get("Status", "").lower()
+            )
+            resultat["certains_actifs"] = resultat["nb_total"] > 0
+            resultat["tous_sains"] = (
+                resultat["nb_total"] > 0 and
+                resultat["nb_sains"] == resultat["nb_total"]
+            )
+    except Exception:
+        pass
+
+    # Vérifier l'existence d'un super-administrateur si le backend est actif
+    if resultat["prefixe"] and resultat["certains_actifs"]:
+        nom_backend = f"{resultat['prefixe']}-backend"
+        backend_sain = any(
+            c.get("Name") == nom_backend and "healthy" in c.get("Status", "").lower()
+            for c in resultat["conteneurs"]
+        )
+        if backend_sain:
+            try:
+                script = (
+                    "from applications.comptes.models import Utilisateur; "
+                    "print(Utilisateur.objects.filter(is_superuser=True).count())"
+                )
+                r = subprocess.run(
+                    ["docker", "compose", "-f", str(FICHIER_COMPOSE), "exec", "-T",
+                     nom_backend, "python", "manage.py", "shell", "-c", script],
+                    capture_output=True, text=True, timeout=15, cwd=str(RACINE_PROJET)
+                )
+                if r.returncode == 0:
+                    # La dernière ligne est le résultat (les autres peuvent être des imports auto)
+                    derniere_ligne = r.stdout.strip().split("\n")[-1]
+                    try:
+                        resultat["admin_existe"] = int(derniere_ligne) > 0
+                    except ValueError:
+                        pass
+            except Exception:
+                pass
+
+    return resultat
 
 
 # ------------------------------------------------------------
@@ -229,7 +330,10 @@ def sauvegarder_configuration(config: dict):
     chemin = RACINE_PROJET / "installateur" / ".configuration-en-cours.json"
     with open(chemin, "w", encoding="utf-8") as f:
         # Ne pas sauvegarder les mots de passe en clair
-        config_filtree = {k: v for k, v in config.items() if "mot_de_passe" not in k.lower() and "secret" not in k.lower()}
+        config_filtree = {
+            k: v for k, v in config.items()
+            if "mot_de_passe" not in k.lower() and "secret" not in k.lower()
+        }
         json.dump(config_filtree, f, ensure_ascii=False, indent=2)
 
 
@@ -273,10 +377,51 @@ def creer_volumes(prefixe: str, racine: str):
         f"volumes/{prefixe}/journaux/nginx",
         f"volumes/{prefixe}/journaux/backend",
         f"volumes/{prefixe}/journaux/celery",
+        f"volumes/{prefixe}/journaux/celery-beat",
         f"volumes/{prefixe}/journaux/services",
     ]
     for d in dossiers:
         Path(racine, d).mkdir(parents=True, exist_ok=True)
+
+
+def executer_creation_admin(prefixe: str, courriel: str, mot_de_passe: str, prenom: str, nom: str) -> dict:
+    """
+    Crée le super-administrateur via docker compose exec.
+    Les données sont passées par variable d'environnement (pas d'interpolation dans le script)
+    pour éviter tout risque d'injection.
+    """
+    # Script Python qui lit les données depuis une variable d'environnement JSON
+    script = (
+        "import json, os; "
+        "from applications.comptes.models import Utilisateur; "
+        "d = json.loads(os.environ['_ADMIN_DATA']); "
+        "Utilisateur.objects.create_superuser("
+        "courriel=d['courriel'], password=d['password'], "
+        "prenom=d['prenom'], nom=d['nom']"
+        ") if not Utilisateur.objects.filter(courriel=d['courriel']).exists() "
+        "else print('Administrateur déjà existant')"
+    )
+    donnees_json = json.dumps({
+        "courriel": courriel,
+        "password": mot_de_passe,
+        "prenom": prenom,
+        "nom": nom,
+    })
+    try:
+        r = subprocess.run(
+            ["docker", "compose", "-f", str(FICHIER_COMPOSE), "exec", "-T",
+             "-e", f"_ADMIN_DATA={donnees_json}",
+             f"{prefixe}-backend",
+             "python", "manage.py", "shell", "-c", script],
+            capture_output=True, text=True, timeout=60, cwd=str(RACINE_PROJET)
+        )
+        if r.returncode != 0:
+            return {"succes": False, "erreur": r.stderr[-1000:] or r.stdout[-500:]}
+        return {"succes": True, "message": "Compte super-administrateur créé avec succès."}
+    except subprocess.TimeoutExpired:
+        return {"succes": False, "erreur": "Délai dépassé lors de la création du compte."}
+    except Exception as e:
+        return {"succes": False, "erreur": str(e)}
 
 
 # ------------------------------------------------------------
@@ -286,13 +431,19 @@ def creer_volumes(prefixe: str, racine: str):
 @app.route("/")
 @verifier_verrou
 def accueil():
-    """Page d'accueil de l'installateur — vérification des prérequis."""
+    """Page d'accueil de l'installateur — vérification des prérequis et détection d'existant."""
     docker_info = detecter_docker()
     disque_info = verifier_espace_disque(str(RACINE_PROJET))
     memoire_info = verifier_memoire()
     config_existante = charger_configuration()
+    plateforme_existante = detecter_plateforme_existante()
 
-    prets = docker_info["docker"] and docker_info["compose"] and disque_info["suffisant"] and memoire_info["suffisant"]
+    prets = (
+        docker_info["docker"] and
+        docker_info["compose"] and
+        disque_info["suffisant"] and
+        memoire_info["suffisant"]
+    )
 
     return render_template("etape0-bienvenue.html",
         docker=docker_info,
@@ -300,7 +451,8 @@ def accueil():
         memoire=memoire_info,
         prets=prets,
         config_existante=config_existante,
-        version_installateur="1.0.0",
+        plateforme_existante=plateforme_existante,
+        version_installateur="1.1.0",
     )
 
 
@@ -322,7 +474,6 @@ def etape1_identite():
         return redirect(url_for("etape2_ports"))
 
     config = charger_configuration()
-    # Suggérer un préfixe depuis le nom de domaine si possible
     return render_template("etape1-identite.html",
         config=config,
         fuseaux=[
@@ -379,7 +530,6 @@ def etape3_base_de_donnees():
         }
         return redirect(url_for("etape4_courriel"))
 
-    # Générer des valeurs par défaut sécurisées
     return render_template("etape3-base-de-donnees.html",
         config=charger_configuration(),
         bdd_mdp_defaut=generer_secret(16),
@@ -397,9 +547,10 @@ def etape4_courriel():
 
     if request.method == "POST":
         donnees = request.form.to_dict()
+        port_smtp = int(donnees.get("courriel_port_smtp", 587))
         session["etape4"] = {
             "courriel_hote_smtp": donnees.get("courriel_hote_smtp", ""),
-            "courriel_port_smtp": int(donnees.get("courriel_port_smtp", 587)),
+            "courriel_port_smtp": port_smtp,
             "courriel_tls": donnees.get("courriel_tls", "true") == "true",
             "courriel_utilisateur": donnees.get("courriel_utilisateur", ""),
             "courriel_mot_de_passe": donnees.get("courriel_mot_de_passe", ""),
@@ -478,6 +629,46 @@ def lancer_installation():
     return render_template("installation-en-cours.html", config=config)
 
 
+# ------------------------------------------------------------
+# Route de reprise — installation existante
+# ------------------------------------------------------------
+@app.route("/reprise", methods=["GET", "POST"])
+@verifier_verrou
+def reprise():
+    """
+    Page de reprise pour une installation existante.
+    Permet de créer un compte administrateur sans relancer
+    l'intégralité du processus d'installation.
+    """
+    plateforme = detecter_plateforme_existante()
+
+    if request.method == "POST":
+        donnees = request.form.to_dict()
+        if donnees.get("admin_mot_de_passe") != donnees.get("admin_mot_de_passe_confirm"):
+            return render_template("reprise.html",
+                plateforme=plateforme,
+                erreur="Les mots de passe ne correspondent pas.",
+            )
+        # Stocker pour que l'API puisse y accéder
+        session["reprise_admin"] = {
+            "prefixe": plateforme["prefixe"],
+            "admin_prenom": donnees.get("admin_prenom", ""),
+            "admin_nom": donnees.get("admin_nom", ""),
+            "admin_courriel": donnees.get("admin_courriel", ""),
+            "admin_mot_de_passe": donnees.get("admin_mot_de_passe", ""),
+        }
+        return render_template("reprise.html",
+            plateforme=plateforme,
+            lancer_creation=True,
+        )
+
+    return render_template("reprise.html", plateforme=plateforme, erreur=None)
+
+
+# ------------------------------------------------------------
+# API REST
+# ------------------------------------------------------------
+
 @app.route("/api/installer/etapes", methods=["POST"])
 def api_executer_installation():
     """API appelée par le JavaScript de la page d'installation en cours."""
@@ -511,7 +702,7 @@ def api_executer_installation():
                 return jsonify({"succes": False, "erreur": r.stderr[-2000:]})
             return jsonify({"succes": True, "message": "Images Docker construites."})
         except subprocess.TimeoutExpired:
-            return jsonify({"succes": False, "erreur": "Délai dépassé lors de la construction des images."})
+            return jsonify({"succes": False, "erreur": "Délai dépassé lors de la construction des images (10 min)."})
         except Exception as e:
             return jsonify({"succes": False, "erreur": str(e)})
 
@@ -528,50 +719,76 @@ def api_executer_installation():
             return jsonify({"succes": False, "erreur": str(e)})
 
     elif etape == "sante":
-        import time
-        time.sleep(15)  # Attendre que les services démarrent
-        r = subprocess.run(
-            ["docker", "compose", "-f", str(FICHIER_COMPOSE), "ps", "--format", "json"],
-            capture_output=True, text=True, timeout=30, cwd=str(RACINE_PROJET)
-        )
-        return jsonify({"succes": True, "message": "Services vérifiés.", "details": r.stdout[:1000]})
+        # Attendre avec retry que les services critiques soient sains (max 5 minutes)
+        SERVICES_CRITIQUES = [f"{prefixe}-postgresql", f"{prefixe}-redis", f"{prefixe}-backend"]
+        MAX_TENTATIVES = 30   # 30 × 10s = 5 min
+        DELAI_SEC = 10
+
+        for tentative in range(MAX_TENTATIVES):
+            time.sleep(DELAI_SEC)
+            try:
+                r = subprocess.run(
+                    ["docker", "compose", "-f", str(FICHIER_COMPOSE), "ps", "--format", "json"],
+                    capture_output=True, text=True, timeout=30, cwd=str(RACINE_PROJET)
+                )
+                if r.returncode == 0 and r.stdout.strip():
+                    conteneurs = []
+                    for ligne in r.stdout.strip().split("\n"):
+                        if ligne.strip():
+                            try:
+                                conteneurs.append(json.loads(ligne))
+                            except json.JSONDecodeError:
+                                pass
+
+                    # Vérifier les services critiques
+                    critiques_sains = all(
+                        any(
+                            c.get("Name") == svc and "healthy" in c.get("Status", "").lower()
+                            for c in conteneurs
+                        )
+                        for svc in SERVICES_CRITIQUES
+                    )
+
+                    if critiques_sains:
+                        nb_sains = sum(1 for c in conteneurs if "healthy" in c.get("Status", "").lower())
+                        return jsonify({
+                            "succes": True,
+                            "message": f"Services critiques opérationnels ({nb_sains}/{len(conteneurs)} sains, {tentative + 1} vérification(s)).",
+                        })
+            except Exception:
+                pass
+
+        # Délai dépassé — retourner l'état actuel sans bloquer la suite
+        return jsonify({
+            "succes": True,
+            "message": "Délai de vérification dépassé — certains services secondaires démarrent encore. "
+                       "Les migrations seront tentées ; elles échoueront si la base n'est pas prête.",
+        })
 
     elif etape == "migrations":
         try:
             r = subprocess.run(
                 ["docker", "compose", "-f", str(FICHIER_COMPOSE), "exec", "-T",
                  f"{prefixe}-backend", "python", "manage.py", "migrate", "--noinput"],
-                capture_output=True, text=True, timeout=120, cwd=str(RACINE_PROJET)
+                capture_output=True, text=True, timeout=180, cwd=str(RACINE_PROJET)
             )
             if r.returncode != 0:
-                return jsonify({"succes": False, "erreur": r.stderr[-2000:]})
+                return jsonify({"succes": False, "erreur": r.stderr[-2000:] or r.stdout[-1000:]})
             return jsonify({"succes": True, "message": "Migrations de base de données appliquées."})
+        except subprocess.TimeoutExpired:
+            return jsonify({"succes": False, "erreur": "Délai dépassé lors des migrations (3 min)."})
         except Exception as e:
             return jsonify({"succes": False, "erreur": str(e)})
 
     elif etape == "superadmin":
-        try:
-            courriel_admin = config["admin_courriel"]
-            mot_de_passe_admin = config["admin_mot_de_passe"]
-            prenom_admin = config["admin_prenom"]
-            nom_admin = config["admin_nom"]
-            commande_creation = (
-                f"from applications.comptes.models import Utilisateur; "
-                f"Utilisateur.objects.create_superuser("
-                f"courriel='{courriel_admin}', "
-                f"password='{mot_de_passe_admin}', "
-                f"prenom='{prenom_admin}', "
-                f"nom='{nom_admin}'"
-                f") if not Utilisateur.objects.filter(courriel='{courriel_admin}').exists() else print('Déjà créé')"
-            )
-            r = subprocess.run(
-                ["docker", "compose", "-f", str(FICHIER_COMPOSE), "exec", "-T",
-                 f"{prefixe}-backend", "python", "manage.py", "shell", "-c", commande_creation],
-                capture_output=True, text=True, timeout=60, cwd=str(RACINE_PROJET)
-            )
-            return jsonify({"succes": True, "message": "Compte super-administrateur créé."})
-        except Exception as e:
-            return jsonify({"succes": False, "erreur": str(e)})
+        resultat = executer_creation_admin(
+            prefixe=prefixe,
+            courriel=config["admin_courriel"],
+            mot_de_passe=config["admin_mot_de_passe"],
+            prenom=config["admin_prenom"],
+            nom=config["admin_nom"],
+        )
+        return jsonify(resultat)
 
     elif etape == "verrou":
         FICHIER_VERROU.parent.mkdir(parents=True, exist_ok=True)
@@ -590,6 +807,33 @@ def api_executer_installation():
     return jsonify({"succes": False, "erreur": f"Étape inconnue : {etape}"})
 
 
+@app.route("/api/installer/admin-seulement", methods=["POST"])
+def api_admin_seulement():
+    """
+    Crée un super-administrateur sur une installation existante
+    (utilisé depuis la page de reprise).
+    """
+    if "reprise_admin" not in session:
+        return jsonify({"succes": False, "erreur": "Données de reprise absentes."})
+
+    donnees = session["reprise_admin"]
+    resultat = executer_creation_admin(
+        prefixe=donnees["prefixe"],
+        courriel=donnees["admin_courriel"],
+        mot_de_passe=donnees["admin_mot_de_passe"],
+        prenom=donnees["admin_prenom"],
+        nom=donnees["admin_nom"],
+    )
+    return jsonify(resultat)
+
+
+@app.route("/api/etat-conteneurs")
+def api_etat_conteneurs():
+    """Retourne l'état en temps réel des conteneurs de la plateforme."""
+    plateforme = detecter_plateforme_existante()
+    return jsonify(plateforme)
+
+
 @app.route("/api/verifier-port/<int:port>")
 def api_verifier_port(port: int):
     libre = port_libre(port)
@@ -598,7 +842,6 @@ def api_verifier_port(port: int):
         "port": port,
         "libre": libre,
         "avertissement": avertissement,
-        # Utilisable = libre ET pas réservé Plesk/système
         "utilisable": libre and avertissement is None,
     })
 
