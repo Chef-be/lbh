@@ -19,42 +19,42 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/postgresql
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/postgresql
 
   {{ prefixe_conteneurs }}-donnees-redis:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/redis
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/redis
 
   {{ prefixe_conteneurs }}-donnees-minio:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/minio
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/minio
 
   {{ prefixe_conteneurs }}-journaux:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/journaux
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/journaux
 
   {{ prefixe_conteneurs }}-medias:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/medias
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/medias
 
   {{ prefixe_conteneurs }}-statiques:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: {{ racine_projet }}/volumes/{{ prefixe_conteneurs }}/statiques
+      device: {{ racine_projet_hote }}/volumes/{{ prefixe_conteneurs }}/statiques
 
 # ------------------------------------------------------------
 # RÉSEAU DÉDIÉ

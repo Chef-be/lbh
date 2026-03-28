@@ -24,6 +24,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 
 # Détection du répertoire racine du projet
 RACINE_PROJET = Path(__file__).parent.parent
+# Chemin hôte réel (distinct du chemin conteneur /projet) — pour les device: des volumes Docker
+RACINE_PROJET_HOTE = os.environ.get("RACINE_PROJET_HOTE", str(RACINE_PROJET))
 FICHIER_VERROU = RACINE_PROJET / "installateur" / ".installation-terminee"
 FICHIER_ENV = RACINE_PROJET / ".env"
 FICHIER_COMPOSE = RACINE_PROJET / "compose.yaml"
@@ -451,6 +453,7 @@ def etape6_recapitulatif():
         "secret_django": generer_secret(32),
         "secret_nextauth": generer_secret(32),
         "racine_projet": str(RACINE_PROJET),
+        "racine_projet_hote": RACINE_PROJET_HOTE,
         "date_installation": datetime.datetime.now().isoformat(),
     }
 

@@ -25,6 +25,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RACINE_PROJET=/projet
+      - RACINE_PROJET_HOTE=/var/www/vhosts/lbh-economiste.com/httpdocs
       - TZ=Europe/Paris
     working_dir: /projet/installateur
     command: ["python", "app.py", "--port", "5099", "--hote", "0.0.0.0"]
