@@ -45,7 +45,7 @@ export function FormulaireNouveauProjet() {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (donnees: DonneesProjet) => api.post("/api/projets/", donnees),
+    mutationFn: (donnees: DonneesProjet) => api.post<{ id: string }>("/api/projets/", donnees),
     onSuccess: (projet: { id: string }) => {
       router.push(`/projets/${projet.id}`);
     },

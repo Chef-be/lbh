@@ -28,7 +28,7 @@ export function FormulaireNouvelleEtudeVoirie({ projetId }: { projetId: string }
   const [erreurs, setErreurs] = useState<Record<string, string>>({});
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (donnees: DonneesVoirie) => api.post("/api/voirie/", donnees),
+    mutationFn: (donnees: DonneesVoirie) => api.post<{ id: string }>("/api/voirie/", donnees),
     onSuccess: (etude: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["etudes-voirie", projetId] });
       router.push(`/projets/${projetId}/voirie`);

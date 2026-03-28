@@ -38,7 +38,7 @@ export function FormulaireNouvelleEtude({ projetId }: { projetId: string }) {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (donnees: DonneesEtude) => api.post("/api/economie/", donnees),
+    mutationFn: (donnees: DonneesEtude) => api.post<{ id: string }>("/api/economie/", donnees),
     onSuccess: (etude: { id: string }) => {
       router.push(`/projets/${projetId}/economie/${etude.id}`);
     },
