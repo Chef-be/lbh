@@ -64,7 +64,7 @@ export function FormulaireNouvelleEtudeVoirie({ projetId }: { projetId: string }
     ];
     optionnels.forEach((cle) => {
       const val = f.get(cle) as string;
-      if (val) (donnees as Record<string, string>)[cle] = val;
+      if (val) (donnees as unknown as Record<string, string>)[cle] = val;
     });
 
     mutate(donnees);

@@ -66,7 +66,7 @@ export function FormulaireNouvelleEtude({ projetId }: { projetId: string }) {
     if (lot) donnees.lot = lot;
     ["taux_frais_chantier", "taux_frais_generaux", "taux_aleas", "taux_marge_cible", "taux_pertes"].forEach((cle) => {
       const val = f.get(cle) as string;
-      if (val) (donnees as Record<string, string>)[cle] = val;
+      if (val) (donnees as unknown as Record<string, string>)[cle] = val;
     });
     mutate(donnees);
   }
